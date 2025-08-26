@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+# Global settings
+
+__path_to_images__ = "\images"
 
 #Constants
 pi = np.pi
@@ -106,7 +109,8 @@ def plot_results(sol):
     axs[1].set_xlabel('Time')
     axs[1].grid(True)
 
-    plt.tight_layout()
+    plt.tight_layout(pad=4.0)  # Add extra spacing between plots
+    plt.savefig('de-ex-1.svg', format='svg', dpi=600)
     plt.show()
 
 # Main execution
