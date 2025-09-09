@@ -25,6 +25,8 @@ wv=nu*np.exp(-Ev/(kb*T))
 Di=(a**2)*wi
 Dv=(a**2)*wv
 
+print(f"Di: {Di}, Dv: {Dv}")
+
 G_0 = 1e-6/S0
 
 NL=1e-7/S0
