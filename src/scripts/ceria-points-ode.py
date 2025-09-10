@@ -160,15 +160,15 @@ if __name__ == "__main__":
         'D_Ce_v': D_Coeff(D_0_Ce_v, E_m_Ce_v, T),
         'D_O_i': D_Coeff(D_0_O_i, E_m_O_i, T),
         'D_O_v': D_Coeff(D_0_O_v, E_m_O_v, T),
-        'r0': 3e-8,
+        'r0': 4*a,
     }
     print(f"D_Ce_i: {params['D_Ce_i']:.3e} cm^2/s")
     print(f"D_Ce_v: {params['D_Ce_v']:.3e} cm^2/s")
     print(f"D_O_i: {params['D_O_i']:.3e} cm^2/s")
     print(f"D_O_v: {params['D_O_v']:.3e} cm^2/s")
     # Initial conditions
-    t0 = 1e-6
-    y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, G_O*t0*1e-6, 2*Omega_0 / a**2  ]  
+    t0 = 1e-10
+    y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, G_O*t0*1e-6, 2 *Omega_0 / a**2  ]  
 
     # Time span
     t_span = (0, 1.2)  # Start and end time
