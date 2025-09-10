@@ -71,46 +71,47 @@ def ODE_system(t, y, params):
     k_ce = (Omega_0 / a**2) * (48 * D_Ce_i + 48 * D_Ce_i)
     k_o = (Omega_0 / a**2) * (36 * D_O_i + 24 * D_O_i)
 
+    beta = 84 * Omega_0 / a**2
     st = 2 * pi *R_L * N_L
 
     # ODEs
     dc = np.zeros(6)
     dc[0] = G_VCe - k_ce * C_Ce_v * C_Ce_i - j_L_v * pi * r0 * st
     dc[1] = G_VO - k_o * C_O_v * C_O_i - 2 * j_L_v * pi * r0 * st
-    dc[2] = G_CeI - k_ce * C_Ce_i * C_Ce_v - j_L_i * pi * r0 * st - (84 * Omega_0 / a**2) * j_ii
-    dc[3] = G_OI - k_o * C_O_i * C_O_v - 2 * j_L_i * pi * r0 * st - 2 * (84 * Omega_0 / a**2) * j_ii
-    dc[4] = (84 * Omega_0 / a**2) * j_ii
-    dc[5] = 3 * Omega_0 * 2 * pi * r0 / b * (j_L_i - j_L_v) - R_L / (2 * N_L) * (84 * Omega_0 / a**2) * j_ii
+    dc[2] = G_CeI - k_ce * C_Ce_i * C_Ce_v - j_L_i * pi * r0 * st - beta * j_ii
+    dc[3] = G_OI - k_o * C_O_i * C_O_v - 2 * j_L_i * pi * r0 * st - 2 * beta * j_ii
+    dc[4] = beta * j_ii
+    dc[5] = 3 * Omega_0 * 2 * pi * r0 / b * (j_L_i - j_L_v) - R_L / (2 * N_L) * dc[4]
 
     return dc
 
 # Plotting and data 
 
-def plot_results(results):
+def plot_results(results, G_0):
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharey=False)
 
-    axs[0, 0].loglog(results['time'], results['C_Ce_v'], label='C_Ce_v')
-    axs[0, 0].loglog(results['time'], results['C_Ce_i'], label='C_Ce_i')
+    axs[0, 0].loglog(results['time']*G_0, results['C_Ce_v'], label='C_Ce_v')
+    axs[0, 0].loglog(results['time']*G_0, results['C_Ce_i'], label='C_Ce_i')
     axs[0, 0].set_xlabel('Time (s)')
-    axs[0, 0].set_ylabel('Concentration [m^-3]')
+    axs[0, 0].set_ylabel('Concentration [cm^-3]')
     axs[0, 0].legend()
     axs[0, 0].set_title('Vacancy Concentrations')
 
-    axs[0, 1].loglog(results['time'], results['C_O_v'], label='C_O_v')
-    axs[0, 1].loglog(results['time'], results['C_O_i'], label='C_O_i')
+    axs[0, 1].loglog(results['time']*G_0, results['C_O_v'], label='C_O_v')
+    axs[0, 1].loglog(results['time']*G_0, results['C_O_i'], label='C_O_i')
     axs[0, 1].set_xlabel('Time (s)')
-    axs[0, 1].set_ylabel('Concentration [m^-3]')
+    axs[0, 1].set_ylabel('Concentration [cm^-3]')
     axs[0, 1].legend()
     axs[0, 1].set_title('Interstitial Concentrations')
 
-    axs[1, 0].plot(results['time'], results['N_L'], label='N_L')
+    axs[1, 0].plot(results['time']*G_0, results['N_L'], label='N_L')
     axs[1, 0].set_xlabel('Time (s)')
-    axs[1, 0].set_ylabel('Loop Density [m^-3]')
+    axs[1, 0].set_ylabel('Loop Density [cm^-3]')
     axs[1, 0].legend()
     axs[1, 0].set_title('Dislocation Loop Density')
 
-    axs[1, 1].plot(results['time'], results['R_L']*1e9, label='R_L')
+    axs[1, 1].plot(results['time']*G_0, results['R_L']*1e7, label='R_L')
     axs[1, 1].set_xlabel('Time (s)')
     axs[1, 1].set_ylabel('Loop Radius [nm]')
     axs[1, 1].legend()
@@ -123,9 +124,11 @@ def plot_results(results):
 if __name__ == "__main__":
 
     # Lattice and material parameters 
-    a = 0.541e-10  # Lattice parameter in m
-    unit_cell_volume = a**3  # Unit cell volume in m^3
-    Omega_0 = (a**3) / 12  # Atomic volume in m^3
+    a = 541e-10  # Lattice parameter in cm
+    N = 12
+    unit_cell_volume = a**3  # Unit cell volume in cm^3
+    Omega_0 = (a**3) / N  # Atomic volume in cm^3
+    b = a / np.sqrt(3)  # Burgers vector in cm
 
     # Pre factors for diffusion coefficients (in cm^2/s)
     D_0_Ce_v = 0.65
@@ -133,29 +136,32 @@ if __name__ == "__main__":
     D_0_O_v = 0.02
     D_0_O_i = 0.01
 
-    # Convert diffusion coefficients to m^2/s
-    D_0_Ce_v *= 1e-4
-    D_0_Ce_i *= 1e-4
-    D_0_O_v *= 1e-4
-    D_0_O_i *= 1e-4
 
     # Migration energies (in eV)
-    E_m_Ce_v = 2.66
-    E_m_Ce_i = 2.66
+    #E_m_Ce_v = 2.66
+    #E_m_Ce_i = 2.66
+    #E_m_O_v = 0.63
+    #E_m_O_i = 1.4
+
+    E_m_Ce_v = 0.63
+    E_m_Ce_i = 0.63
     E_m_O_v = 0.63
-    E_m_O_i = 1.4
+    E_m_O_i = 0.63
+
 
     # Generation rates (in dpa/s)
     # LF
-    G_Ce_l = 0.87e-6
+    G_0 = 0.87e-6
     # LH
-    #G_Ce_l = 2.6e-6
+    #G_0 = 2.6e-6
 
 
-    #Generation rates (in dpa/(s*m^3))
-    G_Ce = G_Ce_l / unit_cell_volume
-    G_O = 2 * G_Ce
-    
+    #Generation rates (in dpa/(s*cm^3))
+    ratio = 2
+    G_tot = G_0 / Omega_0
+    G_Ce = G_tot* ( ratio / (1 + ratio))
+    G_O = G_Ce * (1 - ratio / (1 + ratio))
+
     # Parameters
     params = {
         'G_Ce_v': G_Ce,
@@ -175,14 +181,16 @@ if __name__ == "__main__":
     print(f"D_O_v: {params['D_O_v']:.3e} m^2/s")
     print(f"G_Ce: {params['G_Ce_v']:.3e} dpa/(s*m^3)")
     # Initial conditions
-    t0 = 1e-10
-    y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, G_O*t0*1e-6, 2 * a**2 * pi]  
+    t0 = 0.00114942528735632*.1
+    y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, G_O*t0*1e-6, np.sqrt(N*Omega_0/(pi*b))]  
     #y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, 1e5, 1e-9] 
     #y0 = [0, 0, 0, 0, 0, 0]
 
     # Time span
-    t_span = (0, 1000)  # Start and end time
-    t_eval = np.linspace(0, 1000, 1000)  # Time points for evaluation
+    dmg = 1.2 # Total damage in dpa
+    t = dmg / G_0
+    t_span = (t0, t)  # Start and end time
+    t_eval = np.linspace(t0, t, 1000)  # Time points for evaluation
 
     # Solve ODEs
     solution = solve_ivp(ODE_system, method='Radau', t_span=t_span, y0=y0, args=(params,), t_eval=t_eval)
@@ -192,5 +200,5 @@ if __name__ == "__main__":
     results['time'] = solution.t
 
     # Plot results
-    plot_results(results)
+    plot_results(results, G_0)
 
