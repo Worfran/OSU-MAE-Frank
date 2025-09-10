@@ -29,6 +29,8 @@ print(f"Di: {Di}, Dv: {Dv}")
 
 G_0 = 1e-6/S0
 
+print(f"G_0: {G_0}")
+
 NL=1e-7/S0
 b=a/np.sqrt(3)
 r0=4*a 
