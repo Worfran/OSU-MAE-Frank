@@ -1,8 +1,14 @@
+#%%
 import pandas as pd
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+from mpl_interactions import interactive_plot, fixed
+from ipywidgets import fixed
+
+#%%
 # Constants
 pi = np.pi
 kb = 8.617333262145e-5  # Boltzmann constant in eV/K
@@ -40,7 +46,7 @@ def compute_j_ii(C_Ce_i, C_O_i, D_Ce_i, D_O_i, eps = 1e-10):
     denominator = 2 * D_Ce_i * (C_Ce_i**2) + D_O_i * (C_O_i**2)
     return nominator / denominator if denominator > eps else eps
 
-
+#%%
 # Main ODE system
 
 def ODE_system(t, y, params):
@@ -74,131 +80,154 @@ def ODE_system(t, y, params):
     beta = 84 * Omega_0 / a**2
     st = 2 * pi *R_L * N_L
 
-    # ODEs
+    #Conditions to keep physical meaning
+    if j_L_i - j_L_v < 0:
+        j_L_i = j_L_v = 0
+    
+
+     # ODEs
+
     dc = np.zeros(6)
+    dc[5] = 3 * Omega_0 * 2 * pi * r0 / b * (j_L_i - j_L_v) - R_L / (2 * N_L) * beta * j_ii
+
+    #Extra conditions to keep physical meaning
+    if dc[5] < 0 :
+        dc[5] = 0
+
     dc[0] = G_VCe - k_ce * C_Ce_v * C_Ce_i - j_L_v * pi * r0 * st
     dc[1] = G_VO - k_o * C_O_v * C_O_i - 2 * j_L_v * pi * r0 * st
     dc[2] = G_CeI - k_ce * C_Ce_i * C_Ce_v - j_L_i * pi * r0 * st - beta * j_ii
     dc[3] = G_OI - k_o * C_O_i * C_O_v - 2 * j_L_i * pi * r0 * st - 2 * beta * j_ii
     dc[4] = beta * j_ii
-    dc[5] = 3 * Omega_0 * 2 * pi * r0 / b * (j_L_i - j_L_v) - R_L / (2 * N_L) * dc[4]
+    
 
     return dc
 
 # Plotting and data 
-
+#%%
 def plot_results(results, G_0):
 
-    fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharey=False)
+    presults = results[results['time'] > 0]
 
-    axs[0, 0].loglog(results['time']*G_0, results['C_Ce_v'], label='C_Ce_v')
-    axs[0, 0].loglog(results['time']*G_0, results['C_Ce_i'], label='C_Ce_i')
-    axs[0, 0].set_xlabel('Time (s)')
-    axs[0, 0].set_ylabel('Concentration [cm^-3]')
-    axs[0, 0].legend()
-    axs[0, 0].set_title('Vacancy Concentrations')
-
-    axs[0, 1].loglog(results['time']*G_0, results['C_O_v'], label='C_O_v')
-    axs[0, 1].loglog(results['time']*G_0, results['C_O_i'], label='C_O_i')
-    axs[0, 1].set_xlabel('Time (s)')
-    axs[0, 1].set_ylabel('Concentration [cm^-3]')
-    axs[0, 1].legend()
-    axs[0, 1].set_title('Interstitial Concentrations')
-
-    axs[1, 0].plot(results['time']*G_0, results['N_L'], label='N_L')
-    axs[1, 0].set_xlabel('Time (s)')
-    axs[1, 0].set_ylabel('Loop Density [cm^-3]')
-    axs[1, 0].legend()
-    axs[1, 0].set_title('Dislocation Loop Density')
-
-    axs[1, 1].plot(results['time']*G_0, results['R_L']*1e7, label='R_L')
-    axs[1, 1].set_xlabel('Time (s)')
-    axs[1, 1].set_ylabel('Loop Radius [nm]')
-    axs[1, 1].legend()
-    axs[1, 1].set_title('Dislocation Loop Radius')
-
+    plt.figure(figsize=(6,5))
+    plt.loglog(results['time'], results['C_Ce_v'], label='C_Ce_v')
+    plt.loglog(results['time'], results['C_Ce_i'], label='C_Ce_i')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Concentration [cm^-3]')
+    plt.legend()
+    plt.title('Vacancy Concentrations')
     plt.tight_layout()
     plt.show()
 
-# Example usage with scipy solver
-if __name__ == "__main__":
+    plt.figure(figsize=(6,5))
+    plt.loglog(results['time'], results['C_O_v'], label='C_O_v')
+    plt.loglog(results['time'], results['C_O_i'], label='C_O_i')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Concentration [cm^-3]')
+    plt.legend()
+    plt.title('Interstitial Concentrations')
+    plt.tight_layout()
+    plt.show()
 
-    # Lattice and material parameters 
-    a = 541e-10  # Lattice parameter in cm
-    N = 12
-    unit_cell_volume = a**3  # Unit cell volume in cm^3
-    Omega_0 = (a**3) / N  # Atomic volume in cm^3
-    b = a / np.sqrt(3)  # Burgers vector in cm
+    plt.figure(figsize=(6,5))
+    plt.plot(results['time']*G_0, results['N_L']*1e-16, label='N_L')
+    plt.xlabel('Dose (dpa)')
+    plt.ylabel('Loop Density ×10$^{16}$ [cm$^{-3}$]')
+    plt.legend()
+    plt.title('Dislocation Loop Density')
+    plt.tight_layout()
+    plt.show()
 
-    # Pre factors for diffusion coefficients (in cm^2/s)
-    D_0_Ce_v = 0.65
-    D_0_Ce_i = 0.01
-    D_0_O_v = 0.02
-    D_0_O_i = 0.01
-
-
-    # Migration energies (in eV)
-    #E_m_Ce_v = 2.66
-    #E_m_Ce_i = 2.66
-    #E_m_O_v = 0.63
-    #E_m_O_i = 1.4
-
-    E_m_Ce_v = 0.63
-    E_m_Ce_i = 0.63
-    E_m_O_v = 0.63
-    E_m_O_i = 0.63
-
-
-    # Generation rates (in dpa/s)
-    # LF
-    G_0 = 0.87e-6
-    # LH
-    #G_0 = 2.6e-6
+    plt.figure(figsize=(6,5))
+    plt.plot(results['time']*G_0, results['R_L']*1e7, label='R_L')
+    plt.xlabel('Dose (dpa)')
+    plt.ylabel('Loop Radius [nm]')
+    plt.legend()
+    plt.title('Dislocation Loop Radius')
+    plt.tight_layout()
+    plt.show()
 
 
-    #Generation rates (in dpa/(s*cm^3))
-    ratio = 2
-    G_tot = G_0 / Omega_0
-    G_Ce = G_tot* ( ratio / (1 + ratio))
-    G_O = G_Ce * (1 - ratio / (1 + ratio))
 
-    # Parameters
-    params = {
-        'G_Ce_v': G_Ce,
-        'G_O_v': G_O,
-        'G_Ce_i': G_Ce,
-        'G_O_i': G_O,
-        'a': a, 
-        'D_Ce_i': D_Coeff(D_0_Ce_i, E_m_Ce_i, T),
-        'D_Ce_v': D_Coeff(D_0_Ce_v, E_m_Ce_v, T),
-        'D_O_i': D_Coeff(D_0_O_i, E_m_O_i, T),
-        'D_O_v': D_Coeff(D_0_O_v, E_m_O_v, T),
-        'r0': 4*a,
-    }
-    print(f"D_Ce_i: {params['D_Ce_i']:.3e} m^2/s")
-    print(f"D_Ce_v: {params['D_Ce_v']:.3e} m^2/s")
-    print(f"D_O_i: {params['D_O_i']:.3e} m^2/s")
-    print(f"D_O_v: {params['D_O_v']:.3e} m^2/s")
-    print(f"G_Ce: {params['G_Ce_v']:.3e} dpa/(s*m^3)")
-    # Initial conditions
-    t0 = 0.00114942528735632*.1
-    y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, G_O*t0*1e-6, np.sqrt(N*Omega_0/(pi*b))]  
-    #y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, 1e5, 1e-9] 
-    #y0 = [0, 0, 0, 0, 0, 0]
+#%%
+# Run the script
 
-    # Time span
-    dmg = 1.2 # Total damage in dpa
-    t = dmg / G_0
-    t_span = (t0, t)  # Start and end time
-    t_eval = np.linspace(t0, t, 1000)  # Time points for evaluation
+#Define parameters
+# Lattice and material parameters 
+a = 541e-10  # Lattice parameter in cm
+N = 12
+unit_cell_volume = a**3  # Unit cell volume in cm^3
+Omega_0 = (a**3) / N  # Atomic volume in cm^3
+b = a / np.sqrt(3)  # Burgers vector in cm
 
-    # Solve ODEs
-    solution = solve_ivp(ODE_system, method='Radau', t_span=t_span, y0=y0, args=(params,), t_eval=t_eval)
+# Pre factors for diffusion coefficients (in cm^2/s)
+D_0_Ce_v = 0.65
+D_0_Ce_i = 0.01
+D_0_O_v = 0.02
+D_0_O_i = 0.01
 
-    # Save results to a DataFrame
-    results = pd.DataFrame(solution.y.T, columns=['C_Ce_v', 'C_O_v', 'C_Ce_i', 'C_O_i', 'N_L', 'R_L'])
-    results['time'] = solution.t
 
-    # Plot results
-    plot_results(results, G_0)
+# Migration energies (in eV)
+E_m_Ce_v = 5.3
+E_m_Ce_i = 2.6
+E_m_O_v = 0.836
+E_m_O_i = 1.18
 
+# Generation rates (in dpa/s)
+# LF
+#G_0 = 0.87e-6
+# LH
+G_0 = 2.6e-6
+
+
+#Generation rates (in dpa/(s*cm^3))
+ratio = 2
+G_tot = G_0 / Omega_0
+G_Ce = G_tot* ( ratio / (1 + ratio))
+G_O = G_Ce * (1 - ratio / (1 + ratio))
+
+# Parameters
+params = {
+    'G_Ce_v': G_Ce,
+    'G_O_v': G_O,
+    'G_Ce_i': G_Ce,
+    'G_O_i': G_O,
+    'a': a, 
+    'D_Ce_i': D_Coeff(D_0_Ce_i, E_m_Ce_i, T),
+    'D_Ce_v': D_Coeff(D_0_Ce_v, E_m_Ce_v, T),
+    'D_O_i': D_Coeff(D_0_O_i, E_m_O_i, T),
+    'D_O_v': D_Coeff(D_0_O_v, E_m_O_v, T),
+    'r0': 4*a,
+}
+print(f"D_Ce_i: {params['D_Ce_i']:.3e} cm^2/s")
+print(f"D_Ce_v: {params['D_Ce_v']:.3e} cm^2/s")
+print(f"D_O_i: {params['D_O_i']:.3e} cm^2/s")
+print(f"D_O_v: {params['D_O_v']:.3e} cm^2/s")
+print(f"G_Ce: {params['G_Ce_v']:.3e} dpa/(s*cm^3)")
+
+#%%
+# Initial conditions
+t0 = 0.00114942528735632*.1
+y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, G_O*t0*1e-6, np.sqrt(N*Omega_0/(pi*b))]  
+#y0 = [G_Ce*t0, G_O*t0, G_Ce*t0, G_O*t0, 1e5, 1e-9] 
+#y0 = [0, 0, 0, 0, 0, 0]
+
+# Time span
+dmg = 1.2 # Total damage in dpa
+t = dmg / G_0
+t_span = (t0, t)  # Start and end time
+t_eval = np.linspace(t0, t, 1000)  # Time points for evaluation
+
+# Solve ODE
+solution = solve_ivp(ODE_system, method='BDF', t_span=t_span, y0=y0, args=(params,), t_eval=t_eval) 
+# BDF method for stiff problems closer to ode15s in MATLAB
+
+#%%
+#Plot results
+# Save results to a DataFrame
+results = pd.DataFrame(solution.y.T, columns=['C_Ce_v', 'C_O_v', 'C_Ce_i', 'C_O_i', 'N_L', 'R_L'])
+results['time'] = solution.t
+
+# Plot results
+plot_results(results, G_0)
+interactive_plots(results, G_0)
