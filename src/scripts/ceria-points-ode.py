@@ -227,7 +227,3 @@ solution = solve_ivp(ODE_system, method='BDF', t_span=t_span, y0=y0, args=(param
 # Save results to a DataFrame
 results = pd.DataFrame(solution.y.T, columns=['C_Ce_v', 'C_O_v', 'C_Ce_i', 'C_O_i', 'N_L', 'R_L'])
 results['time'] = solution.t
-
-# Plot results
-plot_results(results, G_0)
-interactive_plots(results, G_0)
